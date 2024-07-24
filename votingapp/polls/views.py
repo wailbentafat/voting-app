@@ -1,8 +1,9 @@
 from datetime import timedelta
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
-from .serializers import UserSerializer,UserProfileSerializer
+from .serializers import UserSerializer,UserProfileSerializer,eventSerializer
 from django.contrib.auth.hashers import make_password
 from rest_framework_simplejwt.tokens import RefreshToken, AccessToken 
 from rest_framework import status
@@ -10,6 +11,7 @@ from .models import User, UserProfile, Candidate, Event, Voted
 from rest_framework.exceptions import AuthenticationFailed
 from django.contrib.auth.hashers import check_password
 from rest_framework.permissions import IsAuthenticated
+from django.core.serializers import serialize
 
 @api_view(['POST'])
 def create_user(request):
@@ -70,19 +72,22 @@ def enter_profile(request, user_id):
     return Response({'hello': 'world'})
   
   
-@api_view(['POST'])
+@api_view(['GET'])
 def get_events(request):
    event=Event.objects.all()
-   return Response({'event':event})
+   serialized_events = serialize('json', event)
+   return JsonResponse(serialized_events, safe=False)
  
 @api_view(['GET'])
 def get_candidates(request, event_id):
     event = get_object_or_404(Event, pk=event_id)
     candidates = event.candidates.all()
-    return Response({'candidates': candidates})
+    serialized_candidates = serialize('json', candidates)
+    return JsonResponse(serialized_candidates, safe=False)
   
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def vote(request, event_id, candidate_id):
     event = get_object_or_404(Event, pk=event_id)
     candidate = get_object_or_404(Candidate, pk=candidate_id)
